@@ -8,7 +8,7 @@ from colorama import Fore, Style
 #from datetime import datetime, timedelta
 #from zoneinfo import ZoneInfo
 
-version = "0.0.1"
+version = "0.1.0"
 
 # Detecta el sistema y guarda el valor correcto para vaciar consola según el sistema corriendo
 debug, debug_c = False, "clear" if data.os.name == "posix" else "cls",
