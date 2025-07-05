@@ -1,5 +1,11 @@
-import tkinter, yt_dlp, subprocess, title, tools, winsound, data, threading
+import tkinter, yt_dlp, ctypes, sys, tools, winsound, data, threading
 import tkinter.font
+
+def admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
 def mi_hook(d):
     global texto_estado
@@ -110,16 +116,28 @@ def main_menu():
     # Ruta local a ffmpeg
     ruta_ffmpeg = data.script_directory + "\\tools\\ffmpeg.exe"
 
-    opciones = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '320',
-            }],
-        'outtmpl': '%(title)s.%(ext)s',
-        'progress_hooks': [mi_hook],
-        'ffmpeg_location': ruta_ffmpeg
+    if download_option_var.get() == "Audio":
+        opciones = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320',
+                }],
+            'outtmpl': data.script_directory + '\\%(title)s.%(ext)s',
+            'progress_hooks': [mi_hook],
+            'ffmpeg_location': ruta_ffmpeg
+        }
+    else:
+        opciones = {
+            'format': 'bv*[height=1080][ext=mp4]+ba[ext=m4a]/bestvideo[height=1080]+bestaudio',
+            'merge_output_format': 'mp4',
+            'outtmpl': data.script_directory + '\\%(title)s.%(ext)s',
+            'noplaylist': True,  # por si la URL es de una playlist
+            'quiet': False,      # mostrará mensajes de progreso
+            'verbose': True,     # para ver más información
+            'progress_hooks': [mi_hook],
+            'ffmpeg_location': ruta_ffmpeg
         }
     
     def hilo_descarga():
@@ -142,18 +160,23 @@ def main_menu():
 
 
 def main():
-    global url, font, ventana, iconfile, iconempty, download_button
+    global url, font, ventana, iconfile, iconempty, download_button, download_option_var
+
+    if not data.is_compiled(): # Pide permisos de administrador en caso de que este ejecutandose como script .py
+        if not admin():
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+            sys.exit()
 
     iconfile = data.script_directory + "\\tools\\icon.ico"
     iconempty = data.script_directory + "\\tools\\empty.ico"
     ventana = tkinter.Tk()
-    ventana.title("Youtube MP3 Downloader")
+    ventana.title("Youtube Downloader")
 
     ventana.resizable(False, False)
 
     # Dimensiones deseadas de la ventana
     ancho = 400
-    alto = 250
+    alto = 260
     
     # Obtener dimensiones de la pantalla
     ancho_pantalla = ventana.winfo_screenwidth()
@@ -183,26 +206,37 @@ def main():
     ventana.grid_rowconfigure(2, weight=1)
     ventana.grid_rowconfigure(3, weight=1)
     ventana.grid_rowconfigure(4, weight=1)
+    ventana.grid_rowconfigure(5, weight=1)
 
-    label = tkinter.Label(ventana, text="Introduzca la URL de Youtube", font=font, bg="#1e1e1e", fg="white", width=40)
-    label.grid(row=1, column=2, pady=(25, 10))
+    label = tkinter.Label(ventana, text="Introduzca la URL de Youtube", font=font, bg="#1e1e1e", fg="white", width=30, justify="left")
+    label.grid(row=1, column=2, sticky="swe", pady=1, padx=1)
     
-    url = tkinter.Entry(ventana, width=50)
-    url.grid(row=2, column=2, pady=(20, 10))
+    url = tkinter.Entry(ventana)
+    url.grid(row=2, column=2, sticky="we", pady=10, padx=5)
 
-    download_button = tkinter.Button(text="Descargar MP3", font=font, command=main_menu)
-    download_button.grid(row=3, column=2, pady=(10, 20))
+    clear_button = tkinter.Button(text="Limpiar", font=font, command= clear_url, width=6, height=1)
+    clear_button.grid(row=2, column=3, sticky="", pady=1, padx=1)
 
-    clear_button = tkinter.Button(text="Limpiar", font=font, command= clear_url, border=1)
-    clear_button.grid(row=2, column=3, pady=(20, 10))
+    download_option_var = tkinter.StringVar()
+    download_option_var.set("Audio")
+
+    download_audio = tkinter.Radiobutton(ventana, text="Audio", variable=download_option_var, value="Audio", bg="#1e1e1e", fg="white", selectcolor="#1e1e1e")
+    download_audio.grid(row=3, column=2, sticky="nw", pady=1, padx=40)
+
+    download_video = tkinter.Radiobutton(ventana, text="Video", variable=download_option_var, value="Video", bg="#1e1e1e", fg="white", selectcolor="#1e1e1e")
+    download_video.grid(row=3, column=2, sticky="ne", pady=1, padx=40)
+
+
+    download_button = tkinter.Button(text="Descargar", font=font, command=main_menu)
+    download_button.grid(row=4, column=2, sticky="nwe", pady=1, padx=1)
+
+    dev_label = tkinter.Label(ventana, text=f"Dev: bhmint", font=font, bg="#1e1e1e", fg="white", width=17)
+    dev_label.grid(row=5, column=1, sticky="w", pady=1, padx=1)
 
     version = tools.version
 
-    version_label = tkinter.Label(ventana, text=f"Version: {version}", font=font, bg="#1e1e1e", fg="white", width=28)
-    version_label.grid(row=4, column=3, pady=10, padx=1)
-
-    dev_label = tkinter.Label(ventana, text=f"Dev: bhmint", font=font, bg="#1e1e1e", fg="white", width=28)
-    dev_label.grid(row=4, column=1, pady=10, padx=1)
+    version_label = tkinter.Label(ventana, text=f"Version: {version}", font=font, bg="#1e1e1e", fg="white", width=17)
+    version_label.grid(row=5, column=3, sticky="e", pady=1, padx=1)
 
     ventana.mainloop()
 
